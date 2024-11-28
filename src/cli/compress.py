@@ -3,7 +3,14 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from llmcompressor.modifiers.quantization import GPTQModifier, QuantizationModifier
 from llmcompressor.transformers import oneshot
+from llmcompressor.modifiers.smoothquant import SmoothQuantModifier
 from src.cli.utils import generate_readme
+
+def upload_and_delete(org_id, model_id, local_path):
+    cmd = f"huggingface-cli upload {org_id}/{model_id} {local_path} --repo-type model"
+    os.system(cmd)
+    os.system(f"rm -rf {local_path}")
+
 def get_max_sequence_length(config):
     if "max_position_embeddings" in config:
         return config.max_position_embeddings
@@ -32,9 +39,10 @@ def oneshot_with_recipe(
         )
         oneshot(model=model, recipe=recipe)
     elif recipe == 'W8A8_int8':
-        recipe = QuantizationModifier(
-            targets="Linear", scheme="INT8_DYNAMIC", ignore=["lm_head"]
-        )
+        recipe = [
+            SmoothQuantModifier(smoothing_strength=0.8),
+            GPTQModifier(targets="Linear", scheme="W8A8", ignore=["lm_head"]),
+        ]
         oneshot(
             model=model,
             dataset=ds,
@@ -112,7 +120,8 @@ def compress(args):
     })
     with open(os.path.join(SAVE_DIR, "README.md"), "w") as f:
         f.write(readme)
-         
+    new_model_id = args.model_id.replace("/", ".") + f"_{args.scheme}"
+    upload_and_delete(args.org_id, new_model_id, SAVE_DIR)
 if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Compress a model")
@@ -124,4 +133,5 @@ if __name__=="__main__":
     parser.add_argument("--preprocessor", type=str, help="Preprocessor to use", default="chat")
     parser.add_argument("--scheme", type=str, help="Quantization scheme to use", default="W4A16", choices=['W4A16', 'W8A8_FP8', 'W8A8_int8'])
     parser.add_argument("--output-dir", type=str, help="Output directory to save compressed model")
+    parser.add_argument("--org-id", type=str, help="Organization ID to upload compressed model")
     compress(parser.parse_args())

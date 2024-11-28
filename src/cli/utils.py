@@ -1,14 +1,24 @@
-template = """This is a compressed model using [llmcompressor](https://github.com/vllm-project/llm-compressor).
+template = """---
+datasets:
+- {dataset_id}
+base_model:
+- {model_id}
+library_name: transformers
+---
+
+## {model_id} - {scheme} Compression
+
+This is a compressed model using [llmcompressor](https://github.com/vllm-project/llm-compressor).
 
 ## Compression Configuration
 
-Base Model: {model_id}
-Compression Scheme: {scheme}
-Dataset: {dataset_id}
-Dataset Split: {dataset_split}
-Number of Samples: {n_samples}
-Preprocessor: {preprocessor}
-Maximum Sequence Length: {max_seq_length}
+- Base Model: {model_id}
+- Compression Scheme: {scheme}
+- Dataset: {dataset_id}
+- Dataset Split: {dataset_split}
+- Number of Samples: {n_samples}
+- Preprocessor: {preprocessor}
+- Maximum Sequence Length: {max_seq_length}
 
 ## Sample Output
 
